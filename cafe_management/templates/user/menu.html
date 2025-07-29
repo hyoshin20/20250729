@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}메뉴 - 카페 주문 관리{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-utensils me-2"></i>메뉴</h2>
+                <div>
+                    <a href="{{ url_for('view_cart') }}" class="btn btn-primary position-relative">
+                        <i class="fas fa-shopping-cart me-2"></i>장바구니
+                        {% if session.get('cart') %}
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                {{ session.get('cart')|length }}
+                            </span>
+                        {% endif %}
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 카테고리 탭 -->
+    <ul class="nav nav-tabs mb-4" id="menuTabs" role="tablist">
+        {% for category in categories %}
+        <li class="nav-item" role="presentation">
+            <button class="nav-link {% if loop.first %}active{% endif %}" 
+                    id="tab-{{ loop.index }}" 
+                    data-bs-toggle="tab" 
+                    data-bs-target="#content-{{ loop.index }}" 
+                    type="button" 
+                    role="tab">
+                {{ category }}
+            </button>
+        </li>
+        {% endfor %}
+    </ul>
+
+    <!-- 메뉴 콘텐츠 -->
+    <div class="tab-content" id="menuTabContent">
+        {% for category in categories %}
+        <div class="tab-pane fade {% if loop.first %}show active{% endif %}" 
+             id="content-{{ loop.index }}" 
+             role="tabpanel">
+            
+            <div class="row g-4">
+                {% for menu in menus[category] %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100 menu-card position-relative">
+                        {% if menu.image %}
+                        <img src="{{ url_for('static', filename='uploads/' + menu.image) }}" 
+                             class="card-img-top" 
+                             alt="{{ menu.name }}"
+                             style="height: 200px; object-fit: cover;">
+                        {% else %}
+                        <div class="card-img-top bg-light d-flex align-items-center justify-content-center" 
+                             style="height: 200px;">
+                            <i class="fas fa-coffee fa-3x text-muted"></i>
+                        </div>
+                        {% endif %}
+                        
+                        {% if menu.is_soldout %}
+                        <div class="soldout-overlay">
+                            <span>품절</span>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="card-body">
+                            <h5 class="card-title">{{ menu.name }}</h5>
+                            <p class="card-text text-muted">{{ menu.description or '설명 없음' }}</p>
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="h5 text-primary mb-0">{{ "{:,}".format(menu.price) }}원</span>
+                                <span class="badge bg-secondary">
+                                    {% if menu.temperature_option == 'hot' %}
+                                        <i class="fas fa-fire me-1"></i>HOT
+                                    {% elif menu.temperature_option == 'ice' %}
+                                        <i class="fas fa-snowflake me-1"></i>ICE
+                                    {% else %}
+                                        <i class="fas fa-thermometer-half me-1"></i>HOT/ICE
+                                    {% endif %}
+                                </span>
+                            </div>
+                            
+                            {% if not menu.is_soldout %}
+                            <form action="{{ url_for('add_to_cart') }}" method="post">
+                                <input type="hidden" name="menu_id" value="{{ menu.id }}">
+                                
+                                <div class="row g-2 mb-3">
+                                    <div class="col-6">
+                                        <select name="temperature" class="form-select form-select-sm">
+                                            {% if menu.temperature_option in ['hot', 'both'] %}
+                                            <option value="hot">HOT</option>
+                                            {% endif %}
+                                            {% if menu.temperature_option in ['ice', 'both'] %}
+                                            <option value="ice" selected>ICE</option>
+                                            {% endif %}
+                                        </select>
+                                    </div>
+                                    <div class="col-6">
+                                        <select name="quantity" class="form-select form-select-sm">
+                                            {% for i in range(1, 11) %}
+                                            <option value="{{ i }}">{{ i }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <textarea name="special_request" 
+                                              class="form-control form-control-sm" 
+                                              placeholder="특별 요청사항 (선택사항)"
+                                              rows="2"></textarea>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="fas fa-plus me-2"></i>장바구니에 추가
+                                </button>
+                            </form>
+                            {% else %}
+                            <button class="btn btn-secondary w-100" disabled>
+                                <i class="fas fa-times me-2"></i>품절
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            {% if not menus[category] %}
+            <div class="text-center py-5">
+                <i class="fas fa-coffee fa-3x text-muted mb-3"></i>
+                <p class="text-muted">이 카테고리에 메뉴가 없습니다.</p>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 카테고리 탭 활성화 상태 저장
+    const tabs = document.querySelectorAll('#menuTabs .nav-link');
+    tabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            localStorage.setItem('activeMenuTab', this.id);
+        });
+    });
+    
+    // 저장된 탭 상태 복원
+    const savedTab = localStorage.getItem('activeMenuTab');
+    if (savedTab) {
+        const tab = document.getElementById(savedTab);
+        if (tab) {
+            const tabInstance = new bootstrap.Tab(tab);
+            tabInstance.show();
+        }
+    }
+});
+</script>
+{% endblock %} 

@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block title %}장바구니 - 카페 주문 관리{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-shopping-cart me-2"></i>장바구니</h2>
+                <div>
+                    <a href="{{ url_for('user_menu') }}" class="btn btn-outline-primary me-2">
+                        <i class="fas fa-utensils me-2"></i>메뉴 보기
+                    </a>
+                    <a href="{{ url_for('clear_cart') }}" class="btn btn-outline-danger" 
+                       onclick="return confirm('장바구니를 비우시겠습니까?')">
+                        <i class="fas fa-trash me-2"></i>장바구니 비우기
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if cart %}
+    <div class="row">
+        <!-- 장바구니 목록 -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-list me-2"></i>주문 상품</h5>
+                </div>
+                <div class="card-body">
+                    {% for cart_key, item in cart.items() %}
+                    <div class="row align-items-center py-3 border-bottom">
+                        <div class="col-md-6">
+                            <h6 class="mb-1">{{ item.name }}</h6>
+                            <small class="text-muted">
+                                <span class="badge bg-secondary me-2">
+                                    {% if item.temperature == 'hot' %}
+                                        <i class="fas fa-fire me-1"></i>HOT
+                                    {% else %}
+                                        <i class="fas fa-snowflake me-1"></i>ICE
+                                    {% endif %}
+                                </span>
+                                {{ "{:,}".format(item.price) }}원
+                            </small>
+                            {% if item.special_request %}
+                            <div class="mt-1">
+                                <small class="text-info">
+                                    <i class="fas fa-comment me-1"></i>{{ item.special_request }}
+                                </small>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            <form action="{{ url_for('update_cart') }}" method="post" class="d-flex align-items-center">
+                                <input type="hidden" name="cart_key" value="{{ cart_key }}">
+                                <select name="quantity" class="form-select form-select-sm me-2" 
+                                        onchange="this.form.submit()">
+                                    {% for i in range(0, 11) %}
+                                    <option value="{{ i }}" {% if i == item.quantity %}selected{% endif %}>
+                                        {% if i == 0 %}삭제{% else %}{{ i }}{% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </form>
+                        </div>
+                        <div class="col-md-3 text-end">
+                            <strong class="text-primary">{{ "{:,}".format(item.price * item.quantity) }}원</strong>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 주문 정보 -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-receipt me-2"></i>주문 정보</h5>
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('place_order') }}" method="post">
+                        <div class="mb-3">
+                            <label for="customer_name" class="form-label">고객명 *</label>
+                            <input type="text" class="form-control" id="customer_name" name="customer_name" 
+                                   required placeholder="고객명을 입력하세요">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="delivery_location" class="form-label">배달 위치 *</label>
+                            <input type="text" class="form-control" id="delivery_location" name="delivery_location" 
+                                   required placeholder="배달 위치를 입력하세요">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="delivery_time" class="form-label">배달 시간</label>
+                            <select class="form-select" id="delivery_time" name="delivery_time">
+                                <option value="">즉시 배달</option>
+                                <option value="30분 후">30분 후</option>
+                                <option value="1시간 후">1시간 후</option>
+                                <option value="2시간 후">2시간 후</option>
+                                <option value="직접 지정">직접 지정</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="order_request" class="form-label">주문 요청사항</label>
+                            <textarea class="form-control" id="order_request" name="order_request" 
+                                      rows="3" placeholder="주문 요청사항을 입력하세요"></textarea>
+                        </div>
+                        
+                        <hr>
+                        
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="h6 mb-0">총 주문 금액:</span>
+                            <span class="h5 text-primary mb-0">{{ "{:,}".format(total) }}원</span>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100 btn-lg">
+                            <i class="fas fa-check me-2"></i>주문 완료
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <!-- 빈 장바구니 -->
+    <div class="row justify-content-center">
+        <div class="col-md-6 text-center">
+            <div class="card">
+                <div class="card-body py-5">
+                    <i class="fas fa-shopping-cart fa-4x text-muted mb-4"></i>
+                    <h4 class="text-muted mb-3">장바구니가 비어있습니다</h4>
+                    <p class="text-muted mb-4">맛있는 메뉴를 선택해서 장바구니에 추가해보세요!</p>
+                    <a href="{{ url_for('user_menu') }}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-utensils me-2"></i>메뉴 보기
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 배달 시간 직접 지정 옵션 처리
+    const deliveryTimeSelect = document.getElementById('delivery_time');
+    if (deliveryTimeSelect) {
+        deliveryTimeSelect.addEventListener('change', function() {
+            if (this.value === '직접 지정') {
+                const customTime = prompt('배달 시간을 입력하세요 (예: 오후 3시, 15:30)');
+                if (customTime) {
+                    this.value = customTime;
+                } else {
+                    this.value = '';
+                }
+            }
+        });
+    }
+    
+    // 폼 제출 전 유효성 검사
+    const orderForm = document.querySelector('form[action*="place_order"]');
+    if (orderForm) {
+        orderForm.addEventListener('submit', function(e) {
+            const customerName = document.getElementById('customer_name').value.trim();
+            const deliveryLocation = document.getElementById('delivery_location').value.trim();
+            
+            if (!customerName) {
+                e.preventDefault();
+                alert('고객명을 입력해주세요.');
+                document.getElementById('customer_name').focus();
+                return false;
+            }
+            
+            if (!deliveryLocation) {
+                e.preventDefault();
+                alert('배달 위치를 입력해주세요.');
+                document.getElementById('delivery_location').focus();
+                return false;
+            }
+        });
+    }
+});
+</script>
+{% endblock %} 

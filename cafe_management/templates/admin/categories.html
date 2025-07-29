@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block title %}카테고리 관리 - 카페 주문 관리{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- 페이지 헤더 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2><i class="fas fa-tags me-2"></i>카테고리 관리</h2>
+                    <p class="text-muted">메뉴 카테고리를 관리하세요.</p>
+                </div>
+                <a href="{{ url_for('admin_menu') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>메뉴 관리로
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 카테고리 추가 -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-plus me-2"></i>새 카테고리 추가</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        <div class="input-group">
+                            <input type="text" class="form-control" name="category" 
+                                   placeholder="새 카테고리명을 입력하세요" required>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-plus me-1"></i>추가
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 카테고리 목록 -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-list me-2"></i>카테고리 목록</h5>
+                </div>
+                <div class="card-body">
+                    {% if categories %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>카테고리명</th>
+                                    <th>메뉴 수</th>
+                                    <th>액션</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for category in categories %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-tag text-primary me-2"></i>
+                                            <span class="fw-bold">{{ category }}</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ category_menu_counts.get(category, 0) }}개</span>
+                                    </td>
+                                    <td>
+                                        <form method="post" action="{{ url_for('admin_delete_category', category=category) }}" 
+                                              style="display: inline;" 
+                                              onsubmit="return confirmDelete('{{ category }}', {{ category_menu_counts.get(category, 0) }})">
+                                            <button type="submit" class="btn btn-outline-danger btn-sm">
+                                                <i class="fas fa-trash me-1"></i>삭제
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-tags fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">등록된 카테고리가 없습니다.</p>
+                        <p class="text-muted">새 카테고리를 추가해보세요!</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 카테고리별 메뉴 미리보기 -->
+    {% if categories %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-eye me-2"></i>카테고리별 메뉴 미리보기</h5>
+                </div>
+                <div class="card-body">
+                    <div class="accordion" id="categoryAccordion">
+                        {% for category in categories %}
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="heading{{ loop.index }}">
+                                <button class="accordion-button collapsed" type="button" 
+                                        data-bs-toggle="collapse" 
+                                        data-bs-target="#collapse{{ loop.index }}">
+                                    <i class="fas fa-tag text-primary me-2"></i>
+                                    {{ category }}
+                                    <span class="badge bg-secondary ms-2">{{ category_menu_counts.get(category, 0) }}개</span>
+                                </button>
+                            </h2>
+                            <div id="collapse{{ loop.index }}" class="accordion-collapse collapse" 
+                                 data-bs-parent="#categoryAccordion">
+                                <div class="accordion-body">
+                                    {% set category_menus = category_menu_lists.get(category, []) %}
+                                    {% if category_menus %}
+                                    <div class="row g-3">
+                                        {% for menu in category_menus %}
+                                        <div class="col-md-6 col-lg-4">
+                                            <div class="card h-100">
+                                                <div class="card-body">
+                                                    <h6 class="card-title">{{ menu.name }}</h6>
+                                                    <p class="card-text text-muted">{{ "{:,}".format(menu.price) }}원</p>
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <span class="badge bg-secondary">
+                                                            {% if menu.temperature_option == 'hot' %}
+                                                                <i class="fas fa-fire me-1"></i>HOT
+                                                            {% elif menu.temperature_option == 'ice' %}
+                                                                <i class="fas fa-snowflake me-1"></i>ICE
+                                                            {% else %}
+                                                                <i class="fas fa-thermometer-half me-1"></i>HOT/ICE
+                                                            {% endif %}
+                                                        </span>
+                                                        {% if menu.is_soldout %}
+                                                        <span class="badge bg-danger">품절</span>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% else %}
+                                    <div class="text-center py-3">
+                                        <i class="fas fa-coffee fa-2x text-muted mb-2"></i>
+                                        <p class="text-muted">이 카테고리에 메뉴가 없습니다.</p>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 카테고리 추가 폼 유효성 검사
+    const categoryForm = document.querySelector('form[method="post"]');
+    if (categoryForm) {
+        categoryForm.addEventListener('submit', function(e) {
+            const categoryInput = this.querySelector('input[name="category"]');
+            const category = categoryInput.value.trim();
+            
+            if (!category) {
+                e.preventDefault();
+                alert('카테고리명을 입력해주세요.');
+                categoryInput.focus();
+                return false;
+            }
+            
+            // 기존 카테고리와 중복 검사
+            const existingCategories = Array.from(document.querySelectorAll('tbody tr')).map(row => {
+                return row.querySelector('td:first-child span').textContent.trim();
+            });
+            
+            if (existingCategories.includes(category)) {
+                e.preventDefault();
+                alert('이미 존재하는 카테고리입니다.');
+                categoryInput.focus();
+                return false;
+            }
+        });
+    }
+});
+
+function confirmDelete(categoryName, menuCount) {
+    if (menuCount > 0) {
+        return confirm(`카테고리 "${categoryName}"에는 ${menuCount}개의 메뉴가 있습니다.\n카테고리를 삭제하면 해당 메뉴들도 모두 삭제됩니다.\n정말 삭제하시겠습니까?`);
+    } else {
+        return confirm(`카테고리 "${categoryName}"을(를) 삭제하시겠습니까?`);
+    }
+}
+</script>
+{% endblock %} 

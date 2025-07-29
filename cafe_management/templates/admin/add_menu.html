@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+
+{% block title %}메뉴 추가 - 카페 주문 관리{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- 페이지 헤더 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2><i class="fas fa-plus me-2"></i>메뉴 추가</h2>
+                    <p class="text-muted">새로운 메뉴를 추가하세요.</p>
+                </div>
+                <a href="{{ url_for('admin_menu') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>메뉴 목록으로
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 메뉴 추가 폼 -->
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-edit me-2"></i>메뉴 정보 입력</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="name" class="form-label">메뉴명 *</label>
+                                <input type="text" class="form-control" id="name" name="name" 
+                                       required placeholder="메뉴명을 입력하세요">
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="category" class="form-label">카테고리 *</label>
+                                <div class="input-group">
+                                    <select class="form-select" id="category" name="category" required>
+                                        <option value="">카테고리 선택</option>
+                                        {% for category in categories %}
+                                        <option value="{{ category }}">{{ category }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="button" class="btn btn-outline-secondary" 
+                                            data-bs-toggle="modal" data-bs-target="#addCategoryModal">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="price" class="form-label">가격 *</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="price" name="price" 
+                                           required min="0" step="100" placeholder="가격을 입력하세요">
+                                    <span class="input-group-text">원</span>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="temperature_option" class="form-label">온도 옵션 *</label>
+                                <select class="form-select" id="temperature_option" name="temperature_option" required>
+                                    <option value="">온도 옵션 선택</option>
+                                    <option value="hot">HOT만</option>
+                                    <option value="ice">ICE만</option>
+                                    <option value="both" selected>HOT/ICE 모두</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-12">
+                                <label for="description" class="form-label">메뉴 설명</label>
+                                <textarea class="form-control" id="description" name="description" 
+                                          rows="3" placeholder="메뉴에 대한 설명을 입력하세요"></textarea>
+                            </div>
+                            
+                            <div class="col-12">
+                                <label for="image" class="form-label">메뉴 이미지</label>
+                                <input type="file" class="form-control" id="image" name="image" 
+                                       accept="image/*">
+                                <div class="form-text">
+                                    지원 형식: PNG, JPG, JPEG, GIF, WEBP (최대 16MB)
+                                </div>
+                            </div>
+                            
+                            <div class="col-12">
+                                <div class="d-flex justify-content-end gap-2">
+                                    <a href="{{ url_for('admin_menu') }}" class="btn btn-outline-secondary">
+                                        <i class="fas fa-times me-2"></i>취소
+                                    </a>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-2"></i>메뉴 추가
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 카테고리 추가 모달 -->
+<div class="modal fade" id="addCategoryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">새 카테고리 추가</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="newCategory" class="form-label">카테고리명</label>
+                    <input type="text" class="form-control" id="newCategory" 
+                           placeholder="새 카테고리명을 입력하세요">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                <button type="button" class="btn btn-primary" onclick="addNewCategory()">추가</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 이미지 미리보기
+    const imageInput = document.getElementById('image');
+    if (imageInput) {
+        imageInput.addEventListener('change', function() {
+            const file = this.files[0];
+            if (file) {
+                // 파일 크기 검증
+                if (file.size > 16 * 1024 * 1024) {
+                    alert('파일 크기는 16MB 이하여야 합니다.');
+                    this.value = '';
+                    return;
+                }
+                
+                // 파일 형식 검증
+                const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+                if (!allowedTypes.includes(file.type)) {
+                    alert('지원하지 않는 파일 형식입니다. PNG, JPG, JPEG, GIF, WEBP 파일만 업로드 가능합니다.');
+                    this.value = '';
+                    return;
+                }
+            }
+        });
+    }
+    
+    // 폼 제출 전 유효성 검사
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const name = document.getElementById('name').value.trim();
+            const category = document.getElementById('category').value;
+            const price = document.getElementById('price').value;
+            const temperatureOption = document.getElementById('temperature_option').value;
+            
+            if (!name) {
+                e.preventDefault();
+                alert('메뉴명을 입력해주세요.');
+                document.getElementById('name').focus();
+                return false;
+            }
+            
+            if (!category) {
+                e.preventDefault();
+                alert('카테고리를 선택해주세요.');
+                document.getElementById('category').focus();
+                return false;
+            }
+            
+            if (!price || price <= 0) {
+                e.preventDefault();
+                alert('올바른 가격을 입력해주세요.');
+                document.getElementById('price').focus();
+                return false;
+            }
+            
+            if (!temperatureOption) {
+                e.preventDefault();
+                alert('온도 옵션을 선택해주세요.');
+                document.getElementById('temperature_option').focus();
+                return false;
+            }
+        });
+    }
+});
+
+function addNewCategory() {
+    const newCategoryInput = document.getElementById('newCategory');
+    const newCategory = newCategoryInput.value.trim();
+    
+    if (!newCategory) {
+        alert('카테고리명을 입력해주세요.');
+        newCategoryInput.focus();
+        return;
+    }
+    
+    // 기존 카테고리와 중복 검사
+    const categorySelect = document.getElementById('category');
+    const existingCategories = Array.from(categorySelect.options).map(option => option.value);
+    
+    if (existingCategories.includes(newCategory)) {
+        alert('이미 존재하는 카테고리입니다.');
+        return;
+    }
+    
+    // 새 카테고리 옵션 추가
+    const newOption = document.createElement('option');
+    newOption.value = newCategory;
+    newOption.textContent = newCategory;
+    categorySelect.appendChild(newOption);
+    
+    // 새 카테고리 선택
+    categorySelect.value = newCategory;
+    
+    // 모달 닫기
+    const modal = bootstrap.Modal.getInstance(document.getElementById('addCategoryModal'));
+    modal.hide();
+    
+    // 입력 필드 초기화
+    newCategoryInput.value = '';
+    
+    alert(`카테고리 "${newCategory}"가 추가되었습니다.`);
+}
+</script>
+{% endblock %} 

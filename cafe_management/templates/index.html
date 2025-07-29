@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}카페 주문 관리 시스템 - 메인{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center">
+            <div class="card">
+                <div class="card-body p-5">
+                    <h1 class="display-4 mb-4">
+                        <i class="fas fa-coffee text-primary me-3"></i>
+                        카페 주문 관리 시스템
+                    </h1>
+                    <p class="lead mb-5">편리한 카페 주문과 관리 시스템을 이용해보세요.</p>
+                    
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="card h-100 menu-card">
+                                <div class="card-body text-center p-4">
+                                    <div class="mb-3">
+                                        <i class="fas fa-utensils fa-3x text-primary"></i>
+                                    </div>
+                                    <h4 class="card-title">메뉴 주문</h4>
+                                    <p class="card-text">다양한 메뉴를 확인하고 주문해보세요.</p>
+                                    <a href="{{ url_for('user_menu') }}" class="btn btn-primary btn-lg">
+                                        <i class="fas fa-shopping-cart me-2"></i>메뉴 보기
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="card h-100 menu-card">
+                                <div class="card-body text-center p-4">
+                                    <div class="mb-3">
+                                        <i class="fas fa-user-shield fa-3x text-success"></i>
+                                    </div>
+                                    <h4 class="card-title">관리자</h4>
+                                    <p class="card-text">메뉴 관리, 매출 확인, 주문 관리</p>
+                                    <a href="{{ url_for('admin_login') }}" class="btn btn-success btn-lg">
+                                        <i class="fas fa-sign-in-alt me-2"></i>관리자 로그인
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if not session.get('admin_logged_in') %}
+                    <div class="mt-5">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-check-circle text-success me-2"></i>
+                                    <span>간편한 메뉴 주문</span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-check-circle text-success me-2"></i>
+                                    <span>실시간 장바구니</span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-check-circle text-success me-2"></i>
+                                    <span>빠른 배달 서비스</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- 데이터베이스 초기화 링크 (개발용) -->
+            {% if not session.get('admin_logged_in') %}
+            <div class="mt-4 text-center">
+                <small class="text-muted">
+                    <a href="{{ url_for('init_db') }}" class="text-decoration-none">데이터베이스 초기화</a> | 
+                    <a href="{{ url_for('update_db_schema') }}" class="text-decoration-none">스키마 업데이트</a>
+                </small>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %} 
