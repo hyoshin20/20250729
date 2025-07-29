@@ -1,5 +1,5 @@
 """
-Flask 카페 주문 관리 시스템 메인 애플리케이션
+Flask 카페 주문 관리 시스템 메인 애플리케이션 (Supabase 연동)
 사용자 주문과 관리자 메뉴 관리 기능을 제공하는 웹 애플리케이션
 """
 import os
@@ -12,15 +12,24 @@ from werkzeug.security import check_password_hash, generate_password_hash
 import pandas as pd
 from io import BytesIO
 import uuid
+from dotenv import load_dotenv
 
-from models import db, Menu, Order, OrderItem
+# 환경 변수 로드
+load_dotenv()
+
+from supabase_client import get_supabase_client, get_supabase_admin_client, test_supabase_connection
 from config import *
 
 app = Flask(__name__)
 app.config.from_object('config')
 
-# 데이터베이스 초기화
-db.init_app(app)
+# Supabase 클라이언트 초기화
+try:
+    supabase = get_supabase_client()
+    print("✅ Supabase 연결 성공")
+except Exception as e:
+    print(f"❌ Supabase 연결 실패: {e}")
+    print("환경 변수를 확인해주세요: SUPABASE_URL, SUPABASE_ANON_KEY")
 
 # 세션 초기화
 Session(app)
@@ -49,31 +58,39 @@ def index():
 
 @app.route('/init_db')
 def init_db():
-    """데이터베이스 초기화 및 샘플 데이터 생성"""
-    with app.app_context():
-        db.create_all()
+    """Supabase 데이터베이스 초기화 및 샘플 데이터 생성"""
+    try:
+        # Supabase 연결 테스트
+        if not test_supabase_connection():
+            flash('Supabase 연결에 실패했습니다. 환경 변수를 확인해주세요.', 'error')
+            return redirect(url_for('index'))
         
         # 샘플 메뉴 데이터 생성
         sample_menus = [
-            Menu(name='아메리카노', category='커피', price=4500, description='깔끔한 아메리카노', temperature_option='both'),
-            Menu(name='카페라떼', category='커피', price=5000, description='부드러운 카페라떼', temperature_option='both'),
-            Menu(name='카푸치노', category='커피', price=5000, description='거품이 풍부한 카푸치노', temperature_option='both'),
-            Menu(name='에스프레소', category='커피', price=3500, description='진한 에스프레소', temperature_option='hot'),
-            Menu(name='녹차라떼', category='녹차', price=5500, description='진한 녹차라떼', temperature_option='both'),
-            Menu(name='레몬에이드', category='에이드', price=6000, description='상큼한 레몬에이드', temperature_option='ice'),
-            Menu(name='오렌지에이드', category='에이드', price=6000, description='달콤한 오렌지에이드', temperature_option='ice'),
-            Menu(name='티라떼', category='티', price=5500, description='부드러운 티라떼', temperature_option='both'),
-            Menu(name='허브티', category='티', price=4500, description='건강한 허브티', temperature_option='hot'),
-            Menu(name='스무디', category='스무디', price=6500, description='시원한 스무디', temperature_option='ice'),
+            {'name': '아메리카노', 'category': '커피', 'price': 4500, 'description': '깔끔한 아메리카노', 'temperature_option': 'both', 'display_order': 1},
+            {'name': '카페라떼', 'category': '커피', 'price': 5000, 'description': '부드러운 카페라떼', 'temperature_option': 'both', 'display_order': 2},
+            {'name': '카푸치노', 'category': '커피', 'price': 5000, 'description': '거품이 풍부한 카푸치노', 'temperature_option': 'both', 'display_order': 3},
+            {'name': '에스프레소', 'category': '커피', 'price': 3500, 'description': '진한 에스프레소', 'temperature_option': 'hot', 'display_order': 4},
+            {'name': '녹차라떼', 'category': '녹차', 'price': 5500, 'description': '진한 녹차라떼', 'temperature_option': 'both', 'display_order': 5},
+            {'name': '레몬에이드', 'category': '에이드', 'price': 6000, 'description': '상큼한 레몬에이드', 'temperature_option': 'ice', 'display_order': 6},
+            {'name': '오렌지에이드', 'category': '에이드', 'price': 6000, 'description': '달콤한 오렌지에이드', 'temperature_option': 'ice', 'display_order': 7},
+            {'name': '티라떼', 'category': '티', 'price': 5500, 'description': '부드러운 티라떼', 'temperature_option': 'both', 'display_order': 8},
+            {'name': '허브티', 'category': '티', 'price': 4500, 'description': '건강한 허브티', 'temperature_option': 'hot', 'display_order': 9},
+            {'name': '스무디', 'category': '스무디', 'price': 6500, 'description': '시원한 스무디', 'temperature_option': 'ice', 'display_order': 10},
         ]
         
-        for menu in sample_menus:
-            existing = Menu.query.filter_by(name=menu.name).first()
-            if not existing:
-                db.session.add(menu)
+        supabase = get_supabase_client()
         
-        db.session.commit()
-        flash('데이터베이스가 초기화되었습니다.', 'success')
+        # 기존 메뉴 확인 및 새 메뉴 추가
+        for menu_data in sample_menus:
+            existing = supabase.table('cafe_menu').select('id').eq('name', menu_data['name']).execute()
+            if not existing.data:
+                supabase.table('cafe_menu').insert(menu_data).execute()
+        
+        flash('Supabase 데이터베이스가 초기화되었습니다.', 'success')
+        
+    except Exception as e:
+        flash(f'데이터베이스 초기화 중 오류가 발생했습니다: {str(e)}', 'error')
     
     return redirect(url_for('index'))
 
@@ -90,49 +107,73 @@ def update_db_schema():
 @app.route('/user/menu')
 def user_menu():
     """사용자 메뉴 페이지"""
-    categories = db.session.query(Menu.category).distinct().all()
-    categories = [cat[0] for cat in categories]
-    
-    menus = {}
-    for category in categories:
-        menus[category] = Menu.query.filter_by(category=category, is_soldout=False).order_by(Menu.display_order).all()
-    
-    return render_template('user/menu.html', menus=menus, categories=categories)
+    try:
+        supabase = get_supabase_client()
+        
+        # 모든 메뉴 가져오기 (품절되지 않은 것만)
+        response = supabase.table('cafe_menu').select('*').eq('is_soldout', False).order('display_order').execute()
+        all_menus = response.data
+        
+        # 카테고리별로 메뉴 분류
+        categories = list(set(menu['category'] for menu in all_menus))
+        categories.sort()
+        
+        menus = {}
+        for category in categories:
+            menus[category] = [menu for menu in all_menus if menu['category'] == category]
+        
+        return render_template('user/menu.html', menus=menus, categories=categories)
+        
+    except Exception as e:
+        flash(f'메뉴를 불러오는 중 오류가 발생했습니다: {str(e)}', 'error')
+        return render_template('user/menu.html', menus={}, categories=[])
 
 @app.route('/user/add_to_cart', methods=['POST'])
 def add_to_cart():
     """장바구니에 메뉴 추가"""
-    menu_id = request.form.get('menu_id')
-    quantity = int(request.form.get('quantity', 1))
-    temperature = request.form.get('temperature', 'ice')
-    special_request = request.form.get('special_request', '')
-    
-    menu = Menu.query.get_or_404(menu_id)
-    
-    if menu.is_soldout:
-        flash('품절된 메뉴입니다.', 'error')
-        return redirect(url_for('user_menu'))
-    
-    # 세션에서 장바구니 가져오기
-    cart = session.get('cart', {})
-    
-    # 메뉴 ID와 온도 옵션을 키로 사용
-    cart_key = f"{menu_id}_{temperature}"
-    
-    if cart_key in cart:
-        cart[cart_key]['quantity'] += quantity
-    else:
-        cart[cart_key] = {
-            'menu_id': menu_id,
-            'name': menu.name,
-            'price': menu.price,
-            'quantity': quantity,
-            'temperature': temperature,
-            'special_request': special_request
-        }
-    
-    session['cart'] = cart
-    flash(f'{menu.name}이(가) 장바구니에 추가되었습니다.', 'success')
+    try:
+        menu_id = request.form.get('menu_id')
+        quantity = int(request.form.get('quantity', 1))
+        temperature = request.form.get('temperature', 'ice')
+        special_request = request.form.get('special_request', '')
+        
+        # Supabase에서 메뉴 정보 가져오기
+        supabase = get_supabase_client()
+        response = supabase.table('cafe_menu').select('*').eq('id', menu_id).execute()
+        
+        if not response.data:
+            flash('메뉴를 찾을 수 없습니다.', 'error')
+            return redirect(url_for('user_menu'))
+        
+        menu = response.data[0]
+        
+        if menu['is_soldout']:
+            flash('품절된 메뉴입니다.', 'error')
+            return redirect(url_for('user_menu'))
+        
+        # 세션에서 장바구니 가져오기
+        cart = session.get('cart', {})
+        
+        # 메뉴 ID와 온도 옵션을 키로 사용
+        cart_key = f"{menu_id}_{temperature}"
+        
+        if cart_key in cart:
+            cart[cart_key]['quantity'] += quantity
+        else:
+            cart[cart_key] = {
+                'menu_id': menu_id,
+                'name': menu['name'],
+                'price': menu['price'],
+                'quantity': quantity,
+                'temperature': temperature,
+                'special_request': special_request
+            }
+        
+        session['cart'] = cart
+        flash(f'{menu["name"]}이(가) 장바구니에 추가되었습니다.', 'success')
+        
+    except Exception as e:
+        flash(f'장바구니 추가 중 오류가 발생했습니다: {str(e)}', 'error')
     
     return redirect(url_for('user_menu'))
 
@@ -166,53 +207,62 @@ def update_cart():
 @app.route('/user/place_order', methods=['POST'])
 def place_order():
     """주문하기"""
-    cart = session.get('cart', {})
+    try:
+        cart = session.get('cart', {})
+        
+        if not cart:
+            flash('장바구니가 비어있습니다.', 'error')
+            return redirect(url_for('view_cart'))
+        
+        customer_name = request.form.get('customer_name')
+        delivery_location = request.form.get('delivery_location')
+        delivery_time = request.form.get('delivery_time')
+        order_request = request.form.get('order_request')
+        
+        if not customer_name or not delivery_location:
+            flash('고객명과 배달 위치를 입력해주세요.', 'error')
+            return redirect(url_for('view_cart'))
+        
+        total_amount = get_cart_total()
+        
+        supabase = get_supabase_client()
+        
+        # 주문 생성
+        order_data = {
+            'total_amount': total_amount,
+            'customer_name': customer_name,
+            'delivery_location': delivery_location,
+            'delivery_time': delivery_time,
+            'order_request': order_request
+        }
+        
+        order_response = supabase.table('cafe_order').insert(order_data).execute()
+        order_id = order_response.data[0]['id']
+        
+        # 주문 항목 생성
+        order_items = []
+        for cart_key, item in cart.items():
+            order_item_data = {
+                'order_id': order_id,
+                'menu_id': item['menu_id'],
+                'quantity': item['quantity'],
+                'subtotal': item['price'] * item['quantity'],
+                'special_request': item['special_request'],
+                'temperature': item['temperature']
+            }
+            order_items.append(order_item_data)
+        
+        if order_items:
+            supabase.table('cafe_order_item').insert(order_items).execute()
+        
+        # 장바구니 비우기
+        session.pop('cart', None)
+        
+        flash(f'주문이 완료되었습니다. 주문번호: {order_id}', 'success')
+        
+    except Exception as e:
+        flash(f'주문 처리 중 오류가 발생했습니다: {str(e)}', 'error')
     
-    if not cart:
-        flash('장바구니가 비어있습니다.', 'error')
-        return redirect(url_for('view_cart'))
-    
-    customer_name = request.form.get('customer_name')
-    delivery_location = request.form.get('delivery_location')
-    delivery_time = request.form.get('delivery_time')
-    order_request = request.form.get('order_request')
-    
-    if not customer_name or not delivery_location:
-        flash('고객명과 배달 위치를 입력해주세요.', 'error')
-        return redirect(url_for('view_cart'))
-    
-    total_amount = get_cart_total()
-    
-    # 주문 생성
-    order = Order(
-        total_amount=total_amount,
-        customer_name=customer_name,
-        delivery_location=delivery_location,
-        delivery_time=delivery_time,
-        order_request=order_request
-    )
-    
-    db.session.add(order)
-    db.session.flush()  # ID 생성을 위해 flush
-    
-    # 주문 항목 생성
-    for cart_key, item in cart.items():
-        order_item = OrderItem(
-            order_id=order.id,
-            menu_id=item['menu_id'],
-            quantity=item['quantity'],
-            subtotal=item['price'] * item['quantity'],
-            special_request=item['special_request'],
-            temperature=item['temperature']
-        )
-        db.session.add(order_item)
-    
-    db.session.commit()
-    
-    # 장바구니 비우기
-    session.pop('cart', None)
-    
-    flash(f'주문이 완료되었습니다. 주문번호: {order.id}', 'success')
     return redirect(url_for('user_menu'))
 
 @app.route('/user/clear_cart')
@@ -260,101 +310,145 @@ def admin_required(f):
 @admin_required
 def admin_dashboard():
     """관리자 대시보드"""
-    # 최근 주문 통계
-    today = datetime.now().date()
-    today_orders = Order.query.filter(
-        db.func.date(Order.order_date) == today
-    ).count()
-    
-    today_sales = db.session.query(db.func.sum(Order.total_amount)).filter(
-        db.func.date(Order.order_date) == today
-    ).scalar() or 0
-    
-    pending_orders = Order.query.filter_by(status='pending').count()
-    
-    return render_template('admin/dashboard.html', 
-                         today_orders=today_orders,
-                         today_sales=today_sales,
-                         pending_orders=pending_orders)
+    try:
+        supabase = get_supabase_client()
+        
+        # 오늘 날짜
+        today = datetime.now().strftime('%Y-%m-%d')
+        
+        # 오늘 주문 수
+        today_orders_response = supabase.table('cafe_order').select('id').gte('order_date', f'{today} 00:00:00').lt('order_date', f'{today} 23:59:59').execute()
+        today_orders = len(today_orders_response.data)
+        
+        # 오늘 매출
+        today_sales_response = supabase.table('cafe_order').select('total_amount').gte('order_date', f'{today} 00:00:00').lt('order_date', f'{today} 23:59:59').execute()
+        today_sales = sum(order['total_amount'] for order in today_sales_response.data)
+        
+        # 대기 중인 주문 수
+        pending_orders_response = supabase.table('cafe_order').select('id').eq('status', 'pending').execute()
+        pending_orders = len(pending_orders_response.data)
+        
+        return render_template('admin/dashboard.html', 
+                             today_orders=today_orders,
+                             today_sales=today_sales,
+                             pending_orders=pending_orders)
+                             
+    except Exception as e:
+        flash(f'대시보드 로딩 중 오류가 발생했습니다: {str(e)}', 'error')
+        return render_template('admin/dashboard.html', 
+                             today_orders=0,
+                             today_sales=0,
+                             pending_orders=0)
 
 @app.route('/admin/sales')
 @admin_required
 def admin_sales():
     """매출 관리"""
-    # 기본 필터 (오늘)
-    start_date = request.args.get('start_date', datetime.now().strftime('%Y-%m-%d'))
-    end_date = request.args.get('end_date', datetime.now().strftime('%Y-%m-%d'))
-    
-    # 주문 조회
-    orders = Order.query.filter(
-        db.func.date(Order.order_date) >= start_date,
-        db.func.date(Order.order_date) <= end_date
-    ).order_by(Order.order_date.desc()).all()
-    
-    # 통계 계산
-    total_orders = len(orders)
-    total_sales = sum(order.total_amount for order in orders)
-    
-    return render_template('admin/sales.html', 
-                         orders=orders,
-                         total_orders=total_orders,
-                         total_sales=total_sales,
-                         start_date=start_date,
-                         end_date=end_date)
+    try:
+        supabase = get_supabase_client()
+        
+        # 기본 필터 (오늘)
+        start_date = request.args.get('start_date', datetime.now().strftime('%Y-%m-%d'))
+        end_date = request.args.get('end_date', datetime.now().strftime('%Y-%m-%d'))
+        
+        # 주문 조회
+        orders_response = supabase.table('cafe_order').select('*').gte('order_date', f'{start_date} 00:00:00').lte('order_date', f'{end_date} 23:59:59').order('order_date', desc=True).execute()
+        orders = orders_response.data
+        
+        # 통계 계산
+        total_orders = len(orders)
+        total_sales = sum(order['total_amount'] for order in orders)
+        
+        return render_template('admin/sales.html', 
+                             orders=orders,
+                             total_orders=total_orders,
+                             total_sales=total_sales,
+                             start_date=start_date,
+                             end_date=end_date)
+                             
+    except Exception as e:
+        flash(f'매출 데이터 로딩 중 오류가 발생했습니다: {str(e)}', 'error')
+        return render_template('admin/sales.html', 
+                             orders=[],
+                             total_orders=0,
+                             total_sales=0,
+                             start_date=start_date,
+                             end_date=end_date)
 
 @app.route('/admin/menu')
 @admin_required
 def admin_menu():
     """메뉴 관리"""
-    categories = db.session.query(Menu.category).distinct().all()
-    categories = [cat[0] for cat in categories]
-    
-    menus = {}
-    for category in categories:
-        menus[category] = Menu.query.filter_by(category=category).order_by(Menu.display_order).all()
-    
-    return render_template('admin/menu.html', menus=menus, categories=categories)
+    try:
+        supabase = get_supabase_client()
+        
+        # 모든 메뉴 가져오기
+        response = supabase.table('cafe_menu').select('*').order('display_order').execute()
+        all_menus = response.data
+        
+        # 카테고리별로 메뉴 분류
+        categories = list(set(menu['category'] for menu in all_menus))
+        categories.sort()
+        
+        menus = {}
+        for category in categories:
+            menus[category] = [menu for menu in all_menus if menu['category'] == category]
+        
+        return render_template('admin/menu.html', menus=menus, categories=categories)
+        
+    except Exception as e:
+        flash(f'메뉴 데이터 로딩 중 오류가 발생했습니다: {str(e)}', 'error')
+        return render_template('admin/menu.html', menus={}, categories=[])
 
 @app.route('/admin/menu/add', methods=['GET', 'POST'])
 @admin_required
 def admin_add_menu():
     """메뉴 추가"""
-    if request.method == 'POST':
-        name = request.form.get('name')
-        category = request.form.get('category')
-        price = float(request.form.get('price'))
-        description = request.form.get('description')
-        temperature_option = request.form.get('temperature_option')
+    try:
+        if request.method == 'POST':
+            name = request.form.get('name')
+            category = request.form.get('category')
+            price = float(request.form.get('price'))
+            description = request.form.get('description')
+            temperature_option = request.form.get('temperature_option')
+            
+            # 이미지 업로드 처리
+            image_filename = None
+            if 'image' in request.files:
+                file = request.files['image']
+                if file and allowed_file(file.filename):
+                    filename = secure_filename(file.filename)
+                    # 고유한 파일명 생성
+                    image_filename = f"{uuid.uuid4().hex}_{filename}"
+                    file.save(os.path.join(UPLOAD_FOLDER, image_filename))
+            
+            # Supabase에 메뉴 추가
+            supabase = get_supabase_client()
+            menu_data = {
+                'name': name,
+                'category': category,
+                'price': price,
+                'description': description,
+                'temperature_option': temperature_option,
+                'image': image_filename
+            }
+            
+            supabase.table('cafe_menu').insert(menu_data).execute()
+            
+            flash('메뉴가 추가되었습니다.', 'success')
+            return redirect(url_for('admin_menu'))
         
-        # 이미지 업로드 처리
-        image_filename = None
-        if 'image' in request.files:
-            file = request.files['image']
-            if file and allowed_file(file.filename):
-                filename = secure_filename(file.filename)
-                # 고유한 파일명 생성
-                image_filename = f"{uuid.uuid4().hex}_{filename}"
-                file.save(os.path.join(UPLOAD_FOLDER, image_filename))
+        # GET 요청: 카테고리 목록 가져오기
+        supabase = get_supabase_client()
+        response = supabase.table('cafe_menu').select('category').execute()
+        categories = list(set(menu['category'] for menu in response.data))
+        categories.sort()
         
-        menu = Menu(
-            name=name,
-            category=category,
-            price=price,
-            description=description,
-            temperature_option=temperature_option,
-            image=image_filename
-        )
+        return render_template('admin/add_menu.html', categories=categories)
         
-        db.session.add(menu)
-        db.session.commit()
-        
-        flash('메뉴가 추가되었습니다.', 'success')
+    except Exception as e:
+        flash(f'메뉴 추가 중 오류가 발생했습니다: {str(e)}', 'error')
         return redirect(url_for('admin_menu'))
-    
-    categories = db.session.query(Menu.category).distinct().all()
-    categories = [cat[0] for cat in categories]
-    
-    return render_template('admin/add_menu.html', categories=categories)
 
 @app.route('/admin/menu/edit/<int:id>', methods=['GET', 'POST'])
 @admin_required
@@ -417,11 +511,25 @@ def admin_delete_menu(id):
 @admin_required
 def admin_toggle_soldout(id):
     """품절 상태 토글"""
-    menu = Menu.query.get_or_404(id)
-    menu.is_soldout = not menu.is_soldout
-    db.session.commit()
-    
-    return jsonify({'success': True, 'is_soldout': menu.is_soldout})
+    try:
+        supabase = get_supabase_client()
+        
+        # 현재 메뉴 상태 가져오기
+        response = supabase.table('cafe_menu').select('is_soldout').eq('id', id).execute()
+        
+        if not response.data:
+            return jsonify({'success': False, 'error': '메뉴를 찾을 수 없습니다.'})
+        
+        current_status = response.data[0]['is_soldout']
+        new_status = not current_status
+        
+        # 상태 업데이트
+        supabase.table('cafe_menu').update({'is_soldout': new_status}).eq('id', id).execute()
+        
+        return jsonify({'success': True, 'is_soldout': new_status})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/admin/categories')
 @admin_required
@@ -505,34 +613,69 @@ def admin_print_receipt(id):
 @admin_required
 def admin_get_recent_orders():
     """최근 주문 조회 (AJAX)"""
-    orders = Order.query.order_by(Order.order_date.desc()).limit(10).all()
-    return jsonify([order.to_dict() for order in orders])
+    try:
+        supabase = get_supabase_client()
+        
+        # 최근 10개 주문 가져오기
+        response = supabase.table('cafe_order').select('*').order('order_date', desc=True).limit(10).execute()
+        orders = response.data
+        
+        # 주문 항목도 함께 가져오기
+        for order in orders:
+            items_response = supabase.table('cafe_order_item').select('*, cafe_menu(name)').eq('order_id', order['id']).execute()
+            order['order_items'] = items_response.data
+        
+        return jsonify(orders)
+        
+    except Exception as e:
+        return jsonify({'error': str(e)})
 
 @app.route('/admin/update_order_status/<int:id>', methods=['POST'])
 @admin_required
 def admin_update_order_status(id):
     """주문 상태 업데이트 (AJAX)"""
-    order = Order.query.get_or_404(id)
-    status = request.json.get('status')
-    
-    if status in ['pending', 'confirmed', 'completed', 'cancelled']:
-        order.status = status
-        db.session.commit()
-        return jsonify({'success': True})
-    
-    return jsonify({'success': False, 'error': '잘못된 상태값입니다.'})
+    try:
+        supabase = get_supabase_client()
+        status = request.json.get('status')
+        
+        if status in ['pending', 'confirmed', 'completed', 'cancelled']:
+            supabase.table('cafe_order').update({'status': status}).eq('id', id).execute()
+            return jsonify({'success': True})
+        
+        return jsonify({'success': False, 'error': '잘못된 상태값입니다.'})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/admin/delete_order/<int:id>', methods=['POST'])
 @admin_required
 def admin_delete_order(id):
     """주문 삭제 (AJAX)"""
-    order = Order.query.get_or_404(id)
-    db.session.delete(order)
-    db.session.commit()
-    
-    return jsonify({'success': True})
+    try:
+        supabase = get_supabase_client()
+        
+        # 주문 항목 먼저 삭제 (CASCADE로 자동 삭제되지만 명시적으로 처리)
+        supabase.table('cafe_order_item').delete().eq('order_id', id).execute()
+        
+        # 주문 삭제
+        supabase.table('cafe_order').delete().eq('id', id).execute()
+        
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
+    # Supabase 연결 테스트
+    try:
+        if test_supabase_connection():
+            print("✅ Supabase 연결 성공")
+        else:
+            print("❌ Supabase 연결 실패")
+            print("환경 변수를 확인해주세요:")
+            print("- SUPABASE_URL")
+            print("- SUPABASE_ANON_KEY")
+    except Exception as e:
+        print(f"❌ Supabase 연결 오류: {e}")
+    
     app.run(debug=True, host='0.0.0.0', port=4011) 

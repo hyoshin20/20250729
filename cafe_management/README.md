@@ -1,6 +1,6 @@
-# 카페 주문 관리 시스템
+# 카페 주문 관리 시스템 (Supabase 연동)
 
-Flask 기반의 카페 주문 관리 시스템입니다. 사용자 주문과 관리자 메뉴 관리 기능을 제공하는 웹 애플리케이션입니다.
+Flask 기반의 카페 주문 관리 시스템입니다. Supabase를 사용하여 클라우드 데이터베이스와 연동하며, 사용자 주문과 관리자 메뉴 관리 기능을 제공하는 웹 애플리케이션입니다.
 
 ## 주요 기능
 
@@ -20,15 +20,39 @@ Flask 기반의 카페 주문 관리 시스템입니다. 사용자 주문과 관
 ## 기술 스택
 
 - **백엔드**: Flask (Python)
-- **데이터베이스**: SQLite (SQLAlchemy ORM)
+- **데이터베이스**: Supabase (PostgreSQL)
 - **프론트엔드**: Bootstrap 5, HTML5, CSS3, JavaScript
 - **아이콘**: Font Awesome
 - **세션 관리**: Flask-Session
 - **파일 처리**: Werkzeug
+- **클라우드 서비스**: Supabase
 
 ## 설치 및 실행
 
-### 1. 환경 설정
+### 1. Supabase 설정
+
+먼저 Supabase 프로젝트를 설정해야 합니다. 자세한 설정 방법은 [SUPABASE_SETUP.md](SUPABASE_SETUP.md)를 참조하세요.
+
+### 2. 환경 변수 설정
+
+프로젝트 루트에 `.env` 파일을 생성하고 Supabase 설정을 추가하세요:
+
+```env
+# Supabase 설정
+SUPABASE_URL=https://[your-project-id].supabase.co
+SUPABASE_ANON_KEY=eyJ[your-anon-key]
+SUPABASE_SERVICE_ROLE_KEY=eyJ[your-service-role-key]
+
+# 관리자 계정 설정
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=admin123
+
+# Flask 설정
+SECRET_KEY=your-secret-key-here
+FLASK_ENV=development
+```
+
+### 3. 환경 설정
 
 ```bash
 # 가상환경 생성 (선택사항)
@@ -39,23 +63,23 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 2. 애플리케이션 실행
+### 4. 애플리케이션 실행
 
 ```bash
 # Flask 애플리케이션 실행
 python app.py
 ```
 
-### 3. 데이터베이스 초기화
+### 5. 데이터베이스 초기화
 
 브라우저에서 다음 URL에 접속하여 데이터베이스를 초기화하세요:
-- `http://localhost:5000/init_db` - 샘플 데이터와 함께 데이터베이스 초기화
+- `http://localhost:4011/init_db` - 샘플 데이터와 함께 데이터베이스 초기화
 
-### 4. 접속
+### 6. 접속
 
-- **메인 페이지**: `http://localhost:5000`
-- **사용자 메뉴**: `http://localhost:5000/user/menu`
-- **관리자 로그인**: `http://localhost:5000/admin/login`
+- **메인 페이지**: `http://localhost:4011`
+- **사용자 메뉴**: `http://localhost:4011/user/menu`
+- **관리자 로그인**: `http://localhost:4011/admin/login`
 
 ## 관리자 계정
 
@@ -68,10 +92,13 @@ python app.py
 ```
 cafe_management/
 ├── app.py                 # 메인 Flask 애플리케이션
-├── models.py              # 데이터베이스 모델
+├── models.py              # 데이터베이스 모델 (참조용)
 ├── config.py              # 설정 파일
 ├── requirements.txt       # Python 패키지 목록
-├── cafe.db                # SQLite 데이터베이스
+├── supabase_client.py     # Supabase 클라이언트
+├── supabase_schema.sql    # Supabase 데이터베이스 스키마
+├── SUPABASE_SETUP.md      # Supabase 설정 가이드
+├── env_example.txt        # 환경 변수 예시
 ├── static/
 │   ├── css/               # CSS 파일들
 │   ├── js/                # JavaScript 파일들

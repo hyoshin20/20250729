@@ -8,7 +8,12 @@ from datetime import timedelta
 SECRET_KEY = os.environ.get('SECRET_KEY') or 'your-secret-key-here-change-in-production'
 DEBUG = True
 
-# 데이터베이스 설정
+# Supabase 설정
+SUPABASE_URL = os.environ.get('SUPABASE_URL')
+SUPABASE_ANON_KEY = os.environ.get('SUPABASE_ANON_KEY')
+SUPABASE_SERVICE_ROLE_KEY = os.environ.get('SUPABASE_SERVICE_ROLE_KEY')
+
+# 데이터베이스 설정 (PostgreSQL)
 SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///cafe.db'
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 
